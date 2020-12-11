@@ -272,6 +272,7 @@ def LocateHW(self):
     #---------------------------------------------------------------------------
     # Get Trainer and find trainer model for Windows and Linux
     #---------------------------------------------------------------------------
+
     if debug.on(debug.Application): logfile.Write ("Get Tacx Trainer")
     if TacxTrainer and TacxTrainer.OK:
         pass
@@ -535,7 +536,7 @@ def Tacx2DongleSub(self, Restart):
     AntDongle.ResetDongle()             # reset dongle
     AntDongle.Calibrate()               # calibrate ANT+ dongle
     AntDongle.Trainer_ChannelConfig()   # Create ANT+ master channel for FE-C
-    
+
     if clv.hrm == None:
         AntDongle.HRM_ChannelConfig()   # Create ANT+ master channel for HRM
     elif clv.hrm < 0:
@@ -573,6 +574,14 @@ def Tacx2DongleSub(self, Restart):
         # only. Not relevant in private environments, so left as is here.
         #-------------------------------------------------------------------
         AntDongle.SlaveVHU_ChannelConfig(0)
+
+    if clv.fec:
+        #-------------------------------------------------------------------
+        # Create ANT+ slave channel for FEC
+        # No pairing-loop: VTX perhaps not yet active and avoid delay
+        #-------------------------------------------------------------------
+        AntDongle.FECTrainer_ChannelConfig(0)
+
 
     if True:
         #-------------------------------------------------------------------
@@ -905,6 +914,9 @@ def Tacx2DongleSub(self, Restart):
                 if clv.Tacx_iVortex and TacxTrainer.HandleANTmessage(d):
                     pass                    # Message is handled or ignored
 
+                if clv.fec and TacxTrainer.HandleANTmessage(d):
+                    pass                    # Message is handled or ignored
+
                 #---------------------------------------------------------------
                 # AcknowledgedData = Slave -> Master
                 #       channel_FE = From CTP (Trainer Road, Zwift) --> Tacx 
@@ -914,6 +926,7 @@ def Tacx2DongleSub(self, Restart):
                     # Fitness Equipment Channel inputs
                     #-----------------------------------------------------------
                     if Channel == ant.channel_FE:
+
                         #-------------------------------------------------------
                         # Data page 48 (0x30) Basic resistance
                         #-------------------------------------------------------
@@ -941,6 +954,7 @@ def Tacx2DongleSub(self, Restart):
                         # Data page 49 (0x31) Target Power
                         #-------------------------------------------------------
                         elif   DataPageNumber == 49:
+
                             TacxTrainer.SetPower(ant.msgUnpage49_TargetPower(info))
                             TargetPowerTime = time.time()
                             if False and clv.PowerMode and debug.on(debug.Application):
@@ -957,6 +971,7 @@ def Tacx2DongleSub(self, Restart):
                         # Data page 50 (0x32) Wind Resistance
                         #-------------------------------------------------------
                         elif   DataPageNumber == 50:
+
                             WindResistance, WindSpeed, DraftingFactor = \
                                 ant.msgUnpage50_WindResistance(info)
                             TacxTrainer.SetWind(WindResistance, WindSpeed, DraftingFactor)
@@ -972,6 +987,7 @@ def Tacx2DongleSub(self, Restart):
                         # Data page 51 (0x33) Track resistance
                         #-------------------------------------------------------
                         elif DataPageNumber == 51:
+
                             if clv.PowerMode and (time.time() - TargetPowerTime) < 30:
                                 #-----------------------------------------------
                                 # In PowerMode, TrackResistance is ignored
@@ -1005,10 +1021,12 @@ def Tacx2DongleSub(self, Restart):
                         # Data page 55 User configuration
                         #-------------------------------------------------------
                         elif DataPageNumber == 55:
+
                             UserWeight, BicycleWeight, BicycleWheelDiameter, GearRatio = \
                                 ant.msgUnpage55_UserConfiguration(info)
                             TacxTrainer.SetUserConfiguration(UserWeight, \
                                 BicycleWeight, BicycleWheelDiameter, GearRatio)
+
 
                         #-------------------------------------------------------
                         # Data page 70 Request data page
@@ -1055,7 +1073,8 @@ def Tacx2DongleSub(self, Restart):
                         #-------------------------------------------------------
                         # Data page 252 ????
                         #-------------------------------------------------------
-                        elif DataPageNumber == 252 and (PrintWarnings or debug.on(debug.Data1)):
+                        elif DataPageNumber == 252:
+                            # This should be directly forwarded to FE-C trainer
                             logfile.Write('FE data page 252 ignored. info=%s' % logfile.HexSpace(info))
                             pass
                             
@@ -1113,22 +1132,28 @@ def Tacx2DongleSub(self, Restart):
                         else: error = "Unknown HRM data page"
 
                     #-----------------------------------------------------------
+                    # FEC data
+                    #-----------------------------------------------------------
+                    elif Channel == ant.channel_FEC:
+
+                        if DataPageNumber == 25:
+                            Channel, DataPageNumber, xx_Event, FE_Cadence, xx_AccPower, FE_Power, xx_Flags = \
+                                    ant.msgUnpage25_TrainerData(info)
+#                            print("JJ FEC:",FE_Cadence,FE_Power)
+                        else:
+#                            print("JJ FEC no:",DataPageNumber,info)
+
+                    #-----------------------------------------------------------
                     # Speed Cadence Sensor inputs
                     #-----------------------------------------------------------
-                    elif Channel == ant.channel_SCS:
+                    elif Channel == ant.channel_SCS_s:
                         #-------------------------------------------------------
                         # Data page 0 CSC data
                         # Only expected when -S flag specified
                         #-------------------------------------------------------
-                        if False:
-                            pass
-#scs                    elif clv.scs >= 0 and DataPageNumber & 0x7f == 0:
-#scs                        Channel, DataPageNumber, BikeCadenceEventTime, \
-#scs                            CumulativeCadenceRevolutionCount, BikeSpeedEventTime, \
-#scs                            CumulativeSpeedRevolutionCount = \
-#scs                            ant.msgUnpage0_CombinedSpeedCadence(info) 
-#scs                        SpeedKmh   = ...
-#scs                        Cadence    = ...
+                        if (DataPageNumber & 0x7f) == 0:
+#                            EventTime, CadenceRevolutionCount, SpeedEventTime, SpeedRevolutionCount = ant.msgUnpage_SCS(info)
+#                            print("JJ SCS:",EventTime, CadenceRevolutionCount, SpeedEventTime, SpeedRevolutionCount)
 
                         #-------------------------------------------------------
                         # Other data pages

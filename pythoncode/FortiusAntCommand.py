@@ -48,6 +48,9 @@ class CommandLineVariables(object):
 
     gui             = False
     hrm             = None       # introduced 2020-02-09; None=not specified, numeric=HRM device, -1=no HRM
+
+    fec             = None
+    
     manual          = False
     manualGrade     = False
     PedalStrokeAnalysis = False
@@ -97,6 +100,7 @@ class CommandLineVariables(object):
         parser.add_argument('-d','--debug',     help='Show debugging data',                                 required=False, default=False)
         parser.add_argument('-g','--gui',       help='Run with graphical user interface',                   required=False, action='store_true')
         parser.add_argument('-H','--hrm',       help='Pair this Heart Rate Monitor (0: any, -1: none)',     required=False, default=False)
+        parser.add_argument('-f','--fec',       help='Pair this FE-C device (0: any, -1: none)',     required=False, default=False)
         parser.add_argument('-m','--manual',    help='Run manual power (ignore target from ANT+ Dongle)',   required=False, action='store_true')
         parser.add_argument('-M','--manualGrade',help='Run manual grade (ignore target from ANT+ Dongle)',  required=False, action='store_true')
         parser.add_argument('-n','--calibrate', help='Do not calibrate before start',                       required=False, action='store_false')
@@ -105,7 +109,7 @@ class CommandLineVariables(object):
         parser.add_argument('-P','--PowerMode', help='Power mode has preference over Resistance mode (for 30 seconds)',
                                                                                                             required=False, action='store_true')
         parser.add_argument('-s','--simulate',  help='Simulated trainer to test ANT+ connectivity',         required=False, action='store_true')
-#scs    parser.add_argument('-S','--scs',       help='Pair this Speed Cadence Sensor (0: default device)',  required=False, default=False)
+        parser.add_argument('-S','--scs',       help='Pair this Speed Cadence Sensor (0: default device)',  required=False, default=False)
         parser.add_argument('-t','--TacxType',  help='Specify Tacx Type; e.g. i-Vortex, default=autodetect',required=False, default=False)
         parser.add_argument('-u','--uphill',    help='Uphill only; negative grade is ignored',              required=False, action='store_true')
         parser.add_argument('-x','--exportTCX', help='Export TCX file',                                     required=False, action='store_true')
@@ -221,6 +225,17 @@ class CommandLineVariables(object):
         #         logfile.Console('Command line error; -f incorrect ftp=%s' % args.ftp)
 
         #-----------------------------------------------------------------------
+        # Get FEC
+        # - -1  : no slave FE-C device
+        # - 0   : pair with the first FE-C that is found
+        # - number : pair with the particular numbered FE-C device.
+        #-----------------------------------------------------------------------
+        if args.fec:
+            try:
+                self.fec = int(args.fec)
+            except:
+                logfile.Console('Command line error; -f incorrect FEC=%s' % args.hrm)
+        #-----------------------------------------------------------------------
         # Get HRM
         # - None: read HRM from Tacx Fortius and broadcast as HRM master device
         # - -1  : no master and no slave device
@@ -241,11 +256,11 @@ class CommandLineVariables(object):
         # - next: pair with the defined ANT+ SCS
         #             the number can be found with ExplorANT
         #-----------------------------------------------------------------------
-#scs    if args.scs:
-#scs        try:
-#scs            self.scs = int(args.scs)
-#scs        except:
-#scs            logfile.Console('Command line error; -S incorrect SCS=%s' % args.scs)
+        if args.scs:
+            try:
+                self.scs = int(args.scs)
+            except:
+                logfile.Console('Command line error; -S incorrect SCS=%s' % args.scs)
 
         #-----------------------------------------------------------------------
         # Get powerfactor
@@ -339,7 +354,7 @@ class CommandLineVariables(object):
             if v or self.args.factor:        logfile.Console("-p %s" % self.PowerFactor )
             if      self.args.PowerMode:     logfile.Console("-P")
             if      self.args.simulate:      logfile.Console("-s")
-#scs        if      self.args.scs:           logfile.Console("-S %s" % self.scs )
+            if      self.args.scs:           logfile.Console("-S %s" % self.scs )
             if      self.args.TacxType:      logfile.Console("-t %s" % self.TacxType)
             if      self.uphill:             logfile.Console("-u")
             if      self.exportTCX:          logfile.Console("-x")

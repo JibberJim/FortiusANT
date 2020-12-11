@@ -120,6 +120,9 @@ channel_VTX_s       = channel_VTX # slave=Cycle Training Program
 channel_VHU_s       = 5           # ANT+ Channel for Tacx i-Vortex Headunit
                                   # slave=Cycle Training Program
 
+channel_FEC         = 4           # ANT+ channel for generic FEC trainers
+channel_FEC_s       = channel_FEC # slave
+
 #---------------------------------------------------------------------------
 # i-Vortex Headunit modes
 #---------------------------------------------------------------------------
@@ -673,9 +676,29 @@ class clsAntDongle():
         ]
         self.Write(messages)
 
+
+    def FECTrainer_ChannelConfig(self, DeviceNumber):
+        if DeviceNumber > 0: s = ", id=%s only" % DeviceNumber
+        else:                s = ", any device"
+
+        if self.OK:
+            logfile.Console ('FortiusANT receives data from an ANT+ Controlled Fitness Equipent device (FE-C)' + s)
+            if debug.on(debug.Data1): logfile.Write ("FECTrainer_ChannelConfig()")
+        messages=[
+            msg42_AssignChannel         (channel_FEC, ChannelType_BidirectionalReceive, NetworkNumber=0x00),
+            msg51_ChannelID             (channel_FEC, DeviceNumber, DeviceTypeID_FE, TransmissionType_IC_GDP),
+            msg45_ChannelRfFrequency    (channel_FEC, RfFrequency_2457Mhz),
+            msg43_ChannelPeriod         (channel_FEC, ChannelPeriod=8192),         # 4 Hz
+            msg60_ChannelTransmitPower  (channel_FEC, TransmitPower_0dBm),
+            msg4B_OpenChannel           (channel_FEC),
+            msg4D_RequestMessage        (channel_FEC, msgID_ChannelID)
+        ]
+        self.Write(messages)
+
     def SlaveTrainer_ChannelConfig(self, DeviceNumber):
         if DeviceNumber > 0: s = ", id=%s only" % DeviceNumber
         else:                s = ", any device"
+
         if self.OK:
             logfile.Console ('FortiusANT receives data from an ANT+ Controlled Fitness Equipent device (FE-C)' + s)
             if debug.on(debug.Data1): logfile.Write ("SlaveTrainer_ChannelConfig()")
@@ -1791,6 +1814,54 @@ def msgUnpage49_TargetPower(info):
 
     return TargetPower
 
+
+def msgPage50_WindResistance(Channel, WindResistance, WindSpeed, DraftingFactor):
+    DataPageNumber          = 50
+
+    WindSpeed = WindSpeed + 127
+    DraftingFactor = DraftingFactor * 255
+    
+    WindResistance = int(min(0xff, WindResistance*100))
+    WindSpeed = int(min(0xff,WindSpeed))
+
+    DraftingFactor = int(min(0xff,DraftingFactor))
+
+    fChannel                = sc.unsigned_char
+    fDataPageNumber         = sc.unsigned_char
+
+    fReserved               = sc.unsigned_char * 4
+
+    fWindR                  = sc.unsigned_char
+    fWindS                  = sc.unsigned_char
+    fDraftingFactor         = sc.unsigned_char
+
+    format=  sc.no_alignment + fChannel + fDataPageNumber + fReserved + fWindR + fWindS + fDraftingFactor
+    info  = struct.pack (format,  Channel,  DataPageNumber, 0xff,0xff,0xff,0xff, WindResistance, WindSpeed, DraftingFactor)
+
+    return info
+
+
+def msgPage51_TrackResistance(Channel, Grade, RollingResistance):
+    DataPageNumber          = 50
+    
+    RollingResistance = int(min(0xff, RollingResistance/ 0.00005))
+
+    Grade = int(0x4E20 + Grade*100)
+
+
+    fChannel                = sc.unsigned_char
+    fDataPageNumber         = sc.unsigned_char
+    
+    fReserved               = sc.unsigned_char * 4
+
+    fGrade                  = sc.unsigned_short
+    fRollingResistance      = sc.unsigned_char
+
+    format=    sc.no_alignment + fChannel + fDataPageNumber + fReserved + fGrade + fRollingResistance
+    info  = struct.pack (format, Channel, DataPageNumber, 0xff,0xff,0xff,0xff, Grade, RollingResistance)
+
+
+    return info
 # ------------------------------------------------------------------------------
 # P a g e 5 0   W i n d R e s i s t a n c e
 # ------------------------------------------------------------------------------
@@ -1847,7 +1918,6 @@ def msgUnpage50_WindResistance(info):
 def msgUnpage51_TrackResistance(info):
     _nChannel           = 0
     fChannel            = sc.unsigned_char  # First byte of the ANT+ message content
-
     _nDataPageNumber    = 1
     fDataPageNumber     = sc.unsigned_char  # First byte of the ANT+ datapage (payload)
 

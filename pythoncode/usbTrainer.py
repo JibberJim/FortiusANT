@@ -236,11 +236,11 @@ class clsTacxTrainer():
     BicycleWheelDiameter    = None
     GearRatio               = None
     UserWeight              = 75
-    UserAndBikeWeight       = 75 + 10       # defined according the standard (data page 51)
+    UserAndBikeWeight       = 75 + 5       # defined according the standard (data page 51)
 
-    RollingResistance       = 0.004
-    WindResistance          = 0.51          # 1.275 * 0.4 * 1.0
-    WindSpeed               = 0
+    RollingResistance       = 0.001
+    WindResistance          = 0.31      
+    WindSpeed               = 0.0
     DraftingFactor          = 1.0
 
     # Information provided by _ReceiveFromTrainer()
@@ -298,7 +298,7 @@ class clsTacxTrainer():
         #-----------------------------------------------------------------------
         if clv.SimulateTrainer: return clsSimulatedTrainer(clv)
         if clv.Tacx_iVortex:    return clsTacxAntVortexTrainer(clv, AntDevice)
-            
+        if clv.fec:     return clsFECTrainer(clv,AntDevice)
         #-----------------------------------------------------------------------
         # So we are going to initialize USB
         # This may be either 'Legacy interface' or 'New interface'
@@ -441,9 +441,9 @@ class clsTacxTrainer():
 
     def SetGrade(self, Grade):
         if debug.on(debug.Function):  logfile.Write   ("SetGrade(%s)" % Grade)
-        if Grade < -30 or Grade > 30: logfile.Console ("Grade limitted to range -30 ... 30")
-        if Grade >  30: Grade =  30
-        if Grade < -30: Grade = -30
+        if Grade < -2 or Grade > 4: logfile.Console ("Grade limitted to range -3 ... 2")
+        if Grade >  4: Grade =  4
+        if Grade < -2: Grade = -2
 
         self.TargetMode         = mode_Grade
         self.TargetGrade        = Grade
@@ -943,7 +943,7 @@ class clsSimulatedTrainer(clsTacxTrainer):
         if False or self.TargetPower < 10:   # Return fixed value
             self.SpeedKmh    = 34.5
             self.HeartRate   = 135
-            self.CurrentPower= 246
+            self.CurrentPower= 126
             self.Cadence     = 113
         else:                           # Return animated value
                                         # Using this setting, you let TrainerRoad and FortiusANT play together
@@ -957,7 +957,10 @@ class clsSimulatedTrainer(clsTacxTrainer):
                 deltaPower        = 0
             else:
                 self.CurrentPower = self.CurrentPower + deltaPower / 8          # Step towards TargetPower
-            self.CurrentPower *= (1 + random.randint(-3,3) / 100)               # Variation of 5%
+
+            self.CurrentPower = min(self.CurrentPower,220)
+
+            self.CurrentPower *= (1 + random.randint(-6,6) / 100)               # Variation of 5%
 
             self.Cadence       = 100 - min(10, deltaPower) / 10                 # Cadence drops when Target increases
             self.Cadence      *= (1 + random.randint(-2,2) / 100)               # Variation of 2%
@@ -974,6 +977,174 @@ class clsSimulatedTrainer(clsTacxTrainer):
             self.HeartRate    += random.randint(-5,5)                           # Variation of heartrate by 5 beats
 
         self.VirtualSpeedKmh= self.SpeedKmh
+
+#-------------------------------------------------------------------------------
+# c l s FEC T r a i n e r
+#-------------------------------------------------------------------------------
+# FE-C trainer with ANT connection
+# Actually, only the data-storage and Refresh() with Grade2Power() is used!
+#-------------------------------------------------------------------------------
+
+class clsFECTrainer(clsTacxTrainer):
+    def __init__(self, clv, AntDevice):
+        super().__init__(clv, "Pair with generic FEC trainer")
+        if debug.on(debug.Function):logfile.Write ("clsFECTrainer.__init__()")
+        self.AntDevice         = AntDevice
+        self.OK                = True           # The AntDevice is there,
+                                                # the trainer not yet paired!
+
+        self.__ResetTrainer()
+
+    def __ResetTrainer(self):
+        self.__AntFECpaired    = False
+        self.__DeviceNumberFEC = 0              # provided by CHANNEL_ID msg
+
+        self.__Cadence         = 0              # provided by datapage 0
+        self.__CurrentPower    = 0
+        self.__WheelSpeed      = 0
+        self.__SpeedKmh        = 0              #     (from WheelSpeed)
+
+        self.Message = 'Pair with FEC trainer'
+
+    #---------------------------------------------------------------------------
+    # R e c e i v e F r o m T r a i n e r
+    #---------------------------------------------------------------------------
+    # input     __data as collected by HandleANTmessage
+    #
+    # function  Now provide data to TacxTrainer
+    #
+    # returns   Buttons, Cadence, CurrentPower, SpeedKmh, Message
+    #
+    #           NOT: HeartRate, TargetResistance, CurrentResistance, PedalEcho
+    #                WheelSpeed
+    #---------------------------------------------------------------------------
+    def _ReceiveFromTrainer(self):
+        # ----------------------------------------------------------------------
+        # Data provided by data pages
+        # ----------------------------------------------------------------------
+        self.Cadence      = self.__Cadence
+        self.CurrentPower = self.__CurrentPower
+        self.WheelSpeed   = self.__WheelSpeed
+
+#       self.SpeedKmh     = round( self.WheelSpeed / ( 100 * 1000 / 3600 ), 1)
+        self.SpeedKmh     = self.WheelSpeed / 10    # Speed = in 0.1 km/hr
+
+        # ----------------------------------------------------------------------
+        # Compose displayable message
+        # ----------------------------------------------------------------------
+        if self.__DeviceNumberFEC:
+            self.Message = 'FEC Trainer paired: %s' % self.__DeviceNumberFEC
+        else:
+            self.Message = "Pair with FEC"
+
+        if not (self.__DeviceNumberFEC):
+            self.Message += ' (pairing can take a minute)'
+
+    #---------------------------------------------------------------------------
+    # SendToTrainer()
+    #---------------------------------------------------------------------------
+    def SendToTrainer(self, QuarterSecond, TacxMode):
+        if TacxMode == modeStop:
+            self.__ResetTrainer()                       # Must be paired again!
+
+        if QuarterSecond:
+            messages = []
+            if TacxMode ==  modeResistance:
+
+                if self.__AntFECpaired:
+
+                    info = ant.msgPage50_WindResistance(ant.channel_FEC_s,self.WindResistance, self.WindSpeed, self.DraftingFactor)
+                    msg = ant.ComposeMessage(ant.msgID_AcknowledgedData,info)
+                    messages.append ( msg )
+
+                    info = ant.msgPage51_TrackResistance(ant.channel_FEC_s,self.TargetGrade,self.RollingResistance)
+                    msg = ant.ComposeMessage(ant.msgID_AcknowledgedData,info)
+                    messages.append ( msg )
+
+                    logfile.Console ("Grade: %3.1f WindSpeed: %3.1f" % (self.TargetGrade,self.WindSpeed))
+
+
+            #-------------------------------------------------------------------
+            # Send messages, leave receiving to the outer loop
+            #-------------------------------------------------------------------
+            if messages:
+                self.AntDevice.Write(messages, False, False)
+
+    #---------------------------------------------------------------------------
+    # TargetPower2Resistance
+    #
+    # TargetResistance is used for the i-Vortex, even when expressed in Watt, so
+    # that PowerFactor and PowercurveFactor apply; see clsUsbTrainer.Refresh().
+    #---------------------------------------------------------------------------
+    def TargetPower2Resistance(self):
+        self.TargetResistance = self.TargetPower
+
+    #---------------------------------------------------------------------------
+    # Refresh()
+    # No special actions required
+    # Note that TargetResistance=0 for the i-Vortex; TargetPower is sent!
+    #---------------------------------------------------------------------------
+    # def Refresh(self, QuarterSecond, TacxMode):
+    #     super().Refresh(QuarterSecond, TacxMode)
+    #     if debug.on(debug.Function):logfile.Write ("clsTacxAntVortexTrainer.Refresh()")
+    #     pass
+
+    #---------------------------------------------------------------------------
+    # HandleANTmessage()
+    #---------------------------------------------------------------------------
+    def HandleANTmessage(self, msg):
+        _synch, _length, id, info, _checksum, _rest, Channel, DataPageNumber = \
+                                                       ant.DecomposeMessage(msg)
+        dataHandled = False
+        messages    = []
+
+        #-----------------------------------------------------------------------
+        # FEC_s = generic FEC trainer
+        #-----------------------------------------------------------------------
+        if Channel == ant.channel_FEC_s:
+
+            if id == ant.msgID_AcknowledgedData:
+                dataHandled = True
+
+            #-------------------------------------------------------------------
+            # BroadcastData - info received from the master device
+            #-------------------------------------------------------------------
+            elif id == ant.msgID_BroadcastData:
+                #---------------------------------------------------------------
+                # Ask what device is paired
+                #---------------------------------------------------------------
+                if not self.__AntFECpaired:
+                    msg = ant.msg4D_RequestMessage(ant.channel_FEC_s, ant.msgID_ChannelID)
+                    messages.append ( msg )
+
+            # Now we need to look at data pages like the FEC?
+
+
+            #-------------------------------------------------------------------
+            # ChannelID - the info that a master on the network is paired
+            #-------------------------------------------------------------------
+            elif id == ant.msgID_ChannelID:
+                Channel, DeviceNumber, DeviceTypeID, _TransmissionType = \
+                    ant.unmsg51_ChannelID(info)
+
+                if DeviceTypeID == ant.DeviceTypeID_FE:
+                    dataHandled = True
+                    self.__AntFECpaired    = True
+                    self.__DeviceNumberFEC = DeviceNumber
+
+            #-------------------------------------------------------------------
+            # Outer loop does not need to handle channel_FEC_s messages
+            #-------------------------------------------------------------------
+            dataHandled = True
+
+        #-----------------------------------------------------------------------
+        # Send messages, leave receiving to the outer loop
+        #-----------------------------------------------------------------------
+        if messages:
+            self.AntDevice.Write(messages, False, False)
+
+        return dataHandled
+
 
 #-------------------------------------------------------------------------------
 # c l s T a c x A n t V o r t e x T r a i n e r
