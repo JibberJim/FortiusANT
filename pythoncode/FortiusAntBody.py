@@ -1140,25 +1140,25 @@ def Tacx2DongleSub(self, Restart):
                             Channel, DataPageNumber, xx_Event, FE_Cadence, xx_AccPower, FE_Power, xx_Flags = \
                                     ant.msgUnpage25_TrainerData(info)
 #                            print("JJ FEC:",FE_Cadence,FE_Power)
-                        else:
+#                        else:
 #                            print("JJ FEC no:",DataPageNumber,info)
 
                     #-----------------------------------------------------------
                     # Speed Cadence Sensor inputs
                     #-----------------------------------------------------------
-                    elif Channel == ant.channel_SCS_s:
+#                    elif Channel == ant.channel_SCS_s:
                         #-------------------------------------------------------
                         # Data page 0 CSC data
                         # Only expected when -S flag specified
                         #-------------------------------------------------------
-                        if (DataPageNumber & 0x7f) == 0:
+#                        if (DataPageNumber & 0x7f) == 0:
 #                            EventTime, CadenceRevolutionCount, SpeedEventTime, SpeedRevolutionCount = ant.msgUnpage_SCS(info)
 #                            print("JJ SCS:",EventTime, CadenceRevolutionCount, SpeedEventTime, SpeedRevolutionCount)
 
                         #-------------------------------------------------------
                         # Other data pages
                         #-------------------------------------------------------
-                        else: error = "Unknown SCS data page"
+#                        else: error = "Unknown SCS data page"
 
                     #-----------------------------------------------------------
                     # Unknown channel
