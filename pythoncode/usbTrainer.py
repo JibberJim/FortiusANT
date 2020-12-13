@@ -459,6 +459,12 @@ class clsTacxTrainer():
 
         self.RollingResistance = RollingResistance
 
+    def SetWindResistance(self, WindResistance):
+        if debug.on(debug.Function):
+            logfile.Write ("SetWindResistance(%s[def=0.51]])" % 
+                (WindResistance) )
+        self.WindResistance = WindResistance
+
     def SetWind(self, WindResistance, WindSpeed, DraftingFactor):
         if debug.on(debug.Function):
             logfile.Write ("SetWind(%s[def=0.51], %s[def=0], %s[def=1])" % 

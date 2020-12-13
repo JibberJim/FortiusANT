@@ -198,6 +198,9 @@ import logfile
 import TCXexport
 import usbTrainer
 
+
+import paho.mqtt.client as mqtt
+
 PrintWarnings = False   # Print warnings even when logging = off
 CycleTimeFast = 0.02    # TRAINER- SHOULD WRITE THEN READ 70MS LATER REALLY
 CycleTimeANT  = 0.25
@@ -237,6 +240,18 @@ def IdleFunction(self):
         TacxTrainer.Refresh(True, usbTrainer.modeStop)
         rtn = TacxTrainer.Buttons
     return rtn
+
+
+
+
+
+
+def MQTT_Message_WIND(client,userdata,message):
+    global clv, TacxTrainer
+    wind = int(str(message.payload.decode("utf-8"))) / 100
+    print("setting wind to %s" % (wind))
+    TacxTrainer.SetWindResistance( wind )
+
 
 # ------------------------------------------------------------------------------
 # L o c a t e H W
@@ -604,6 +619,14 @@ def Tacx2DongleSub(self, Restart):
     
     if not clv.gui: logfile.Console ("Ctrl-C to exit")
 
+
+    if clv.mqtt:
+        print("Enabling MQTT")
+        client = mqtt.Client("fortius%s",random.randint(1000,9999))
+        client.connect("127.0.0.1")
+        client.subscribe("/neo/wind/resistance")
+        client.on_message=MQTT_Message_WIND
+        
     #---------------------------------------------------------------------------
     # Loop control
     #---------------------------------------------------------------------------
@@ -1209,6 +1232,12 @@ def Tacx2DongleSub(self, Restart):
             #-------------------------------------------------------------------
             # WAIT untill CycleTime is done
             #-------------------------------------------------------------------
+
+            if client:
+                client.loop()
+
+
+            
             ElapsedTime = time.time() - StartTime
             SleepTime = CycleTime - ElapsedTime
             if SleepTime > 0:

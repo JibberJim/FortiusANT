@@ -113,6 +113,8 @@ class CommandLineVariables(object):
         parser.add_argument('-t','--TacxType',  help='Specify Tacx Type; e.g. i-Vortex, default=autodetect',required=False, default=False)
         parser.add_argument('-u','--uphill',    help='Uphill only; negative grade is ignored',              required=False, action='store_true')
         parser.add_argument('-x','--exportTCX', help='Export TCX file',                                     required=False, action='store_true')
+        parser.add_argument('-q','--mqtt',    help='Enable mqtt communication',                             required=False, action='store_true')
+        
 
         #-----------------------------------------------------------------------
         # Deprecated
@@ -140,6 +142,7 @@ class CommandLineVariables(object):
         self.PedalStrokeAnalysis    = args.PedalStrokeAnalysis
         self.SimulateTrainer        = args.simulate
         self.uphill                 = args.uphill
+        self.mqtt                   = args.mqtt
         self.exportTCX              = args.exportTCX or self.manual or self.manualGrade
 
         if self.manual and self.manualGrade:
