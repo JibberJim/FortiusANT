@@ -248,7 +248,7 @@ def IdleFunction(self):
 
 def MQTT_Message_WIND(client,userdata,message):
     global clv, TacxTrainer
-    wind = int(str(message.payload.decode("utf-8"))) / 100
+    wind = float(str(message.payload.decode("utf-8")))
     print("setting wind to %s" % (wind))
     TacxTrainer.SetWindResistance( wind )
 
