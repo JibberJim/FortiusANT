@@ -619,7 +619,7 @@ def Tacx2DongleSub(self, Restart):
     
     if not clv.gui: logfile.Console ("Ctrl-C to exit")
 
-
+    client = None
     if clv.mqtt:
         print("Enabling MQTT")
         client = mqtt.Client("fortius%s",random.randint(1000,9999))
