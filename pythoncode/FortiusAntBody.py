@@ -243,14 +243,31 @@ def IdleFunction(self):
 
 
 
+def MQTT_Message(client,userdata,message):
+    if (message.topic=="/neo/wind/resistance"):
+        MQTT_Message_WIND(message)
+    if (message.topic=="/neo/wind/rolling"):
+        MQTT_Message_ROLLING(message)
+    if (message.topic=="/neo/wind/grade"):
+        MQTT_Message_GRADE(message)
 
-
-
-def MQTT_Message_WIND(client,userdata,message):
-    global clv, TacxTrainer
+def MQTT_Message_WIND(message):
+    global TacxTrainer
     wind = float(str(message.payload.decode("utf-8")))
     print("setting wind to %s" % (wind))
     TacxTrainer.SetWindResistance( wind )
+
+def MQTT_Message_ROLLING(message):
+    global TacxTrainer
+    rolling = float(str(message.payload.decode("utf-8")))
+    print("setting grade to %s" % (rolling))
+    TacxTrainer.SetRollingResistance( rolling )
+
+def MQTT_Message_GRADE(message):
+    global TacxTrainer
+    grade = float(str(message.payload.decode("utf-8")))
+    print("setting grade to %s" % (grade))
+    TacxTrainer.SetGrade( grade )
 
 
 # ------------------------------------------------------------------------------
@@ -625,7 +642,9 @@ def Tacx2DongleSub(self, Restart):
         client = mqtt.Client("fortius%s",random.randint(1000,9999))
         client.connect("127.0.0.1")
         client.subscribe("/neo/wind/resistance")
-        client.on_message=MQTT_Message_WIND
+        client.subscribe("/neo/wind/rolling")
+        client.subscribe("/neo/wind/grade")
+        client.on_message=MQTT_Message
         
     #---------------------------------------------------------------------------
     # Loop control

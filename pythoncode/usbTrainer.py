@@ -278,7 +278,13 @@ class clsTacxTrainer():
         self.clv             = clv
         self.Message         = Message
         self.OK              = False
-
+        self.windCount       = 0
+        self.lastWindResistance = self.WindResistance
+        self.lastWindSpeed = self.WindSpeed
+        self.lastDraftingFactor = self.DraftingFactor
+        self.resistanceCount = 0
+        self.lastRollingResistance = self.RollingResistance
+        self.lastTargetGrade = self.TargetGrade
     #---------------------------------------------------------------------------
     # G e t T r a i n e r
     #---------------------------------------------------------------------------
@@ -1054,18 +1060,30 @@ class clsFECTrainer(clsTacxTrainer):
             self.__ResetTrainer()                       # Must be paired again!
 
         if QuarterSecond:
+            self.windCount=self.windCount+1
+            self.resistanceCount=self.resistanceCount+1
             messages = []
             if TacxMode ==  modeResistance:
 
                 if self.__AntFECpaired:
+                    if (self.windCount>20 or self.lastWindResistance!=self.WindResistance or self.lastWindSpeed != self.WindSpeed or self.lastDraftingFactor != self.DraftingFactor):
+                        print("SENDING WIND")
+                        info = ant.msgPage50_WindResistance(ant.channel_FEC_s,self.WindResistance, self.WindSpeed, self.DraftingFactor)
+                        msg = ant.ComposeMessage(ant.msgID_AcknowledgedData,info)
+                        messages.append ( msg )
+                        self.windCount = 0
+                        self.lastWindResistance = self.WindResistance
+                        self.lastWindSpeed = self.WindSpeed
+                        self.lastDraftingFactor = self.DraftingFactor
 
-                    info = ant.msgPage50_WindResistance(ant.channel_FEC_s,self.WindResistance, self.WindSpeed, self.DraftingFactor)
-                    msg = ant.ComposeMessage(ant.msgID_AcknowledgedData,info)
-                    messages.append ( msg )
-
-                    info = ant.msgPage51_TrackResistance(ant.channel_FEC_s,self.TargetGrade,self.RollingResistance)
-                    msg = ant.ComposeMessage(ant.msgID_AcknowledgedData,info)
-                    messages.append ( msg )
+                    if (self.resistanceCount>20 or self.lastTargetGrade != self.TargetGrade or self.lastRollingResistance !=self.RollingResistance):
+                        print("SENDING GRADE")
+                        info = ant.msgPage51_TrackResistance(ant.channel_FEC_s,self.TargetGrade,self.RollingResistance)
+                        msg = ant.ComposeMessage(ant.msgID_AcknowledgedData,info)
+                        messages.append ( msg )
+                        self.resistanceCount = 0
+                        self.lastRollingResistance = self.RollingResistance
+                        self.lastTargetGrade = self.TargetGrade
 
                     logfile.Console ("Grade: %3.1f WindSpeed: %3.1f" % (self.TargetGrade,self.WindSpeed))
 
@@ -1137,6 +1155,9 @@ class clsFECTrainer(clsTacxTrainer):
                     dataHandled = True
                     self.__AntFECpaired    = True
                     self.__DeviceNumberFEC = DeviceNumber
+
+                    print("FE message - ",DataPageNumber)
+                    print(msg)
 
             #-------------------------------------------------------------------
             # Outer loop does not need to handle channel_FEC_s messages

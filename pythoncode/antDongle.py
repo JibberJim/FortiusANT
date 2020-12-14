@@ -393,8 +393,8 @@ class clsAntDongle():
                             if found_available_ant_stick: break
 
                     except usb.core.USBError as e:                  # cannot write to ANT dongle
-                        if debug.on(debug.Data1 | debug.Function):
-                            logfile.Write ("GetDongle - Exception: %s" % e)
+
+                        logfile.Write ("GetDongle - Exception: %s" % e)
                         self.Message = "GetDongle - ANT dongle in use"
 
                     except Exception as e:
