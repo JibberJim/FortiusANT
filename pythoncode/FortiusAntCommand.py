@@ -114,6 +114,7 @@ class CommandLineVariables(object):
         parser.add_argument('-u','--uphill',    help='Uphill only; negative grade is ignored',              required=False, action='store_true')
         parser.add_argument('-x','--exportTCX', help='Export TCX file',                                     required=False, action='store_true')
         parser.add_argument('-q','--mqtt',    help='Enable mqtt communication',                             required=False, action='store_true')
+        parser.add_argument('-W','--windonly',    help='Only send Wind parameters to FE-C ',                          required=False, action='store_true')
         
 
         #-----------------------------------------------------------------------
@@ -143,6 +144,7 @@ class CommandLineVariables(object):
         self.SimulateTrainer        = args.simulate
         self.uphill                 = args.uphill
         self.mqtt                   = args.mqtt
+        self.windonly               = args.windonly
         self.exportTCX              = args.exportTCX or self.manual or self.manualGrade
 
         if self.manual and self.manualGrade:

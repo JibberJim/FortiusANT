@@ -1088,17 +1088,17 @@ class clsFECTrainer(clsTacxTrainer):
                         self.lastWindResistance = self.WindResistance
                         self.lastWindSpeed = self.WindSpeed
                         self.lastDraftingFactor = self.DraftingFactor
-
-                    if (self.resistanceCount>20 or self.lastTargetGrade != self.TargetGrade or self.lastRollingResistance !=self.RollingResistance):
-                        print("SENDING GRADE")
-                        info = ant.msgPage51_TrackResistance(ant.channel_FEC_s,self.TargetGrade,self.RollingResistance)
-                        msg = ant.ComposeMessage(ant.msgID_AcknowledgedData,info)
-                        messages.append ( msg )
-                        self.resistanceCount = 0
-                        self.lastRollingResistance = self.RollingResistance
-                        self.lastTargetGrade = self.TargetGrade
-
-                    logfile.Console ("Grade: %3.1f WindSpeed: %3.1f" % (self.TargetGrade,self.WindSpeed))
+                        logfile.Console ("WindResistance: %3.1f" % (self.WindResistance))
+                    if not self.clv.windonly:
+                        if (self.resistanceCount>20 or self.lastTargetGrade != self.TargetGrade or self.lastRollingResistance !=self.RollingResistance):
+                            print("SENDING GRADE")
+                            info = ant.msgPage51_TrackResistance(ant.channel_FEC_s,self.TargetGrade,self.RollingResistance)
+                            msg = ant.ComposeMessage(ant.msgID_AcknowledgedData,info)
+                            messages.append ( msg )
+                            self.resistanceCount = 0
+                            self.lastRollingResistance = self.RollingResistance
+                            self.lastTargetGrade = self.TargetGrade
+                            logfile.Console ("Grade: %3.1f" % (self.TargetGrade))
 
 
             #-------------------------------------------------------------------
