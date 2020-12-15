@@ -227,6 +227,9 @@ class clsTacxTrainer():
     # See Refresh() for dependencies
     TargetMode              = mode_Power    # Start with power mode
     TargetGrade             = 0             # no grade
+    GradeThatWasSet         = 0
+    MinGrade                = -10
+    MaxGrade                = 10
     TargetPower             = 100           # and 100Watts
     TargetResistance        = 0             # calculated and input to trainer
     DynamicAdjust           = 1             # adjustment when CurrentPower <> TargetPower
@@ -445,11 +448,21 @@ class clsTacxTrainer():
     def AddPower(self, deltaPower):
         self.SetPower(self.TargetPower + deltaPower)
 
+    def SetMinGrade(self,minGrade):
+        self.MinGrade = minGrade
+        self.SetGrade(self.GradeThatWasSet)
+
+    def SetMaxGrade(self,maxGrade):
+        self.MaxGrade = maxGrade
+        self.SetGrade(self.GradeThatWasSet)
+
     def SetGrade(self, Grade):
+        self.GradeThatWasSet = Grade
         if debug.on(debug.Function):  logfile.Write   ("SetGrade(%s)" % Grade)
-        if Grade < -2 or Grade > 4: logfile.Console ("Grade limitted to range -3 ... 2")
-        if Grade >  4: Grade =  4
-        if Grade < -2: Grade = -2
+        if Grade < self.MinGrade or Grade > self.MaxGrade:
+            logfile.Console ("Grade limitted to range %s ... %s" % (self.MinGrade,self.MaxGrade))
+        if Grade > self.MaxGrade: Grade = self.MaxGrade
+        if Grade < self.MinGrade: Grade = self.MinGrade
 
         self.TargetMode         = mode_Grade
         self.TargetGrade        = Grade

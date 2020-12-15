@@ -250,6 +250,10 @@ def MQTT_Message(client,userdata,message):
         MQTT_Message_ROLLING(message)
     if (message.topic=="/neo/wind/grade"):
         MQTT_Message_GRADE(message)
+    if (message.topic=="/neo/wind/mingrade"):
+        MQTT_Message_MINGRADE(message)    
+    if (message.topic=="/neo/wind/maxgrade"):
+        MQTT_Message_MAXGRADE(message)
 
 def MQTT_Message_WIND(message):
     global TacxTrainer
@@ -268,6 +272,18 @@ def MQTT_Message_GRADE(message):
     grade = float(str(message.payload.decode("utf-8")))
     print("setting grade to %s" % (grade))
     TacxTrainer.SetGrade( grade )
+    
+def MQTT_Message_MINGRADE(message):
+    global TacxTrainer
+    grade = float(str(message.payload.decode("utf-8")))
+    print("setting min grade to %s" % (grade))
+    TacxTrainer.SetMinGrade( grade )
+
+def MQTT_Message_MAXGRADE(message):
+    global TacxTrainer
+    grade = float(str(message.payload.decode("utf-8")))
+    print("setting max grade to %s" % (grade))
+    TacxTrainer.SetMaxGrade( grade )
 
 
 # ------------------------------------------------------------------------------
@@ -644,6 +660,8 @@ def Tacx2DongleSub(self, Restart):
         client.subscribe("/neo/wind/resistance")
         client.subscribe("/neo/wind/rolling")
         client.subscribe("/neo/wind/grade")
+        client.subscribe("/neo/wind/maxgrade")
+        client.subscribe("/neo/wind/mingrade")
         client.on_message=MQTT_Message
         
     #---------------------------------------------------------------------------
