@@ -974,6 +974,7 @@ def Tacx2DongleSub(self, Restart):
                 if clv.Tacx_iVortex and TacxTrainer.HandleANTmessage(d):
                     pass                    # Message is handled or ignored
 
+
                 if clv.fec and TacxTrainer.HandleANTmessage(d):
                     pass                    # Message is handled or ignored
 
@@ -1195,13 +1196,25 @@ def Tacx2DongleSub(self, Restart):
                     # FEC data
                     #-----------------------------------------------------------
                     elif Channel == ant.channel_FEC:
-
+                        Unknown = True
                         if DataPageNumber == 25:
                             Channel, DataPageNumber, xx_Event, FE_Cadence, xx_AccPower, FE_Power, xx_Flags = \
                                     ant.msgUnpage25_TrainerData(info)
-#                            print("JJ FEC:",FE_Cadence,FE_Power)
-#                        else:
-#                            print("JJ FEC no:",DataPageNumber,info)
+                            print("JJ cad/pwe:",FE_Cadence,FE_Power)
+                            Unknown = False
+                        elif DataPageNumber == 16:
+                            Channel, DataPageNumber, EquipmentType, ElapsedTime, DistanceTravelled, \
+                             FE_Speed, FE_HeartRate, Capabilities = \
+                             ant.msgUnpage16_GeneralFEdata(info)
+                            FE_Speed = round( FE_Speed / ( 1000*1000/3600 ), 1)
+                            print("JJ spd/distance",FE_Speed,DistanceTravelled)
+                            Unknown = False
+                        elif DataPageNumber == 81:
+                            Unknown = False
+                        elif DataPageNumber == 80:
+                            Unknown = False
+                        else:
+                            print("JJ FEC no:",DataPageNumber,info)
 
                     #-----------------------------------------------------------
                     # Speed Cadence Sensor inputs

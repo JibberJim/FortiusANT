@@ -242,7 +242,7 @@ class clsTacxTrainer():
     UserAndBikeWeight       = 75 + 5       # defined according the standard (data page 51)
 
     RollingResistance       = 0.001
-    WindResistance          = 0.31      
+    WindResistance          = 0.3      
     WindSpeed               = 0.0
     DraftingFactor          = 1.0
 
@@ -792,7 +792,7 @@ class clsTacxTrainer():
         Proll = c * m * g * v                   # Watt
 
         p     = 1.205                           # air-density
-        cdA   = 0.3                             # resistance factor
+        cdA   = 0.2                             # resistance factor
                                                 # p_cdA = 0.375
         w     =  0                              # wind-speed
         Pair  = 0.5 * p * cdA * (v+w)*(v+w)* v  # Watt
@@ -1141,7 +1141,26 @@ class clsFECTrainer(clsTacxTrainer):
         if Channel == ant.channel_FEC_s:
 
             if id == ant.msgID_AcknowledgedData:
-                dataHandled = True
+                Unknown = true
+                if DataPageNumber == 25:
+                    Unknown = False
+                    Channel, DataPageNumber, xx_Event, FE_Cadence, xx_AccPower, FE_Power, xx_Flags = \
+                             ant.msgUnpage25_TrainerData(info)
+                    print("JJ cad/pwr",FE_Cadence,FE_Power)
+                    dataHandled = True
+                    
+                elif DataPageNumber == 16:
+                    Unknown = False
+                    Channel, DataPageNumber, EquipmentType, ElapsedTime, DistanceTravelled, \
+                             FE_Speed, FE_HeartRate, Capabilities = \
+                             ant.msgUnpage16_GeneralFEdata(info)
+                    
+                    FE_Speed = round( FE_Speed / ( 1000*1000/3600 ), 1)
+                    print("JJ spd/distance",FE_Speed,DistanceTravelled)
+                    dataHandled = True
+
+                if Unknown == False:
+                    print("JJ DataPageNumber no:",DataPageNumber,info)
 
             #-------------------------------------------------------------------
             # BroadcastData - info received from the master device
@@ -1153,8 +1172,6 @@ class clsFECTrainer(clsTacxTrainer):
                 if not self.__AntFECpaired:
                     msg = ant.msg4D_RequestMessage(ant.channel_FEC_s, ant.msgID_ChannelID)
                     messages.append ( msg )
-
-            # Now we need to look at data pages like the FEC?
 
 
             #-------------------------------------------------------------------
@@ -1175,7 +1192,7 @@ class clsFECTrainer(clsTacxTrainer):
             #-------------------------------------------------------------------
             # Outer loop does not need to handle channel_FEC_s messages
             #-------------------------------------------------------------------
-            dataHandled = True
+#            dataHandled = True
 
         #-----------------------------------------------------------------------
         # Send messages, leave receiving to the outer loop

@@ -400,8 +400,8 @@ while AntDongle.OK:
             dpUserConfiguration = 0
             dpRequestDatapage   = 0
 
-            TargetPower  	    = 100   # For SimulateTrainer
-            CurrentPower	    = 100
+            TargetPower  	    = 10   # For SimulateTrainer
+            CurrentPower	    = 10
 
             EventCounter        = 0
 

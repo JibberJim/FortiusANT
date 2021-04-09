@@ -700,7 +700,7 @@ class clsAntDongle():
         else:                s = ", any device"
 
         if self.OK:
-            logfile.Console ('FortiusANT receives data from an ANT+ Controlled Fitness Equipent device (FE-C)' + s)
+            logfile.Console ('FortiusANT SLAVE receives data from an ANT+ Controlled Fitness Equipent device (FE-C)' + s)
             if debug.on(debug.Data1): logfile.Write ("SlaveTrainer_ChannelConfig()")
         messages=[
             msg42_AssignChannel         (channel_FE_s, ChannelType_BidirectionalReceive, NetworkNumber=0x00),
